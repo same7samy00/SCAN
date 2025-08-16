@@ -8,8 +8,8 @@
   <!-- أيقونات Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-  <!-- مكتبة QR -->
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <!-- مكتبة QR من jsDelivr -->
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 
   <style>
     body {
@@ -57,6 +57,19 @@
       50% { transform: scale(1.1); }
       100% { transform: scale(1); }
     }
+    button.retry {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #03A9F4;
+      color: #fff;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    button.retry:hover {
+      background: #0288d1;
+    }
   </style>
 </head>
 <body>
@@ -65,7 +78,7 @@
 
   <div class="status-container status-ready" id="statusContainer">
     <i id="statusIcon" class="status-icon fa-solid fa-hourglass-half"></i>
-    <p id="statusMessage">في انتظار طلب مسح من النظام...</p>
+    <p id="statusMessage">في انتظار تشغيل الكاميرا...</p>
   </div>
 
   <script>
@@ -75,10 +88,22 @@
     const readerDiv = document.getElementById('reader');
     let html5QrCode;
 
-    function updateStatusUI(status, message, iconClass) {
+    function updateStatusUI(status, message, iconClass, showRetry = false) {
       statusContainer.className = `status-container status-${status}`;
       statusIcon.className = `status-icon ${iconClass}`;
       statusMessage.textContent = message;
+
+      // زر إعادة المحاولة في حالة الخطأ
+      if (showRetry) {
+        let retryBtn = document.createElement('button');
+        retryBtn.className = 'retry';
+        retryBtn.textContent = 'إعادة المحاولة';
+        retryBtn.onclick = startScanner;
+        statusContainer.appendChild(retryBtn);
+      } else {
+        const btn = statusContainer.querySelector('.retry');
+        if (btn) btn.remove();
+      }
     }
 
     function onScanSuccess(decodedText) {
@@ -88,7 +113,7 @@
           statusContainer.style.display = 'flex';
           updateStatusUI('success', 'تم المسح بنجاح!', 'fa-solid fa-circle-check');
         }).catch(err => {
-          updateStatusUI('error', 'تعذر إيقاف الكاميرا: ' + err, 'fa-solid fa-video-slash');
+          updateStatusUI('error', 'تعذر إيقاف الكاميرا: ' + err, 'fa-solid fa-video-slash', true);
         });
       }
     }
@@ -105,13 +130,15 @@
           { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
           onScanSuccess
         );
+        updateStatusUI('scanning', 'وجه الكاميرا للباركود...', 'fa-solid fa-qrcode');
       } catch (err) {
-        updateStatusUI('error', 'فشل تشغيل الكاميرا: ' + err, 'fa-solid fa-video-slash');
+        readerDiv.style.display = 'none';
+        statusContainer.style.display = 'flex';
+        updateStatusUI('error', 'فشل تشغيل الكاميرا: ' + err, 'fa-solid fa-video-slash', true);
       }
     }
 
-    // ✅ للتجربة اليدوية:
-    updateStatusUI('scanning', 'وجه الكاميرا للباركود...', 'fa-solid fa-qrcode');
+    // 🚀 يبدأ أوتوماتيك
     startScanner();
   </script>
 
