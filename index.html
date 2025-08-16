@@ -2,14 +2,14 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📷 ماسح الباركود</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ماسح الباركود - شيخ العرب</title>
 
-  <!-- Google Fonts -->
+  <!-- خط Google (Cairo) -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
 
-  <!-- Material Symbols Rounded -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- أيقونات Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
   <style>
     body {
@@ -17,72 +17,78 @@
       background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
       color: #fff;
       margin: 0;
-      height: 100vh;
+      text-align: center;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      height: 100vh;
       overflow: hidden;
     }
-    .container {
-      text-align: center;
-      backdrop-filter: blur(12px);
-      background: rgba(255,255,255,0.06);
-      padding: 30px;
-      border-radius: 24px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-      width: 95%;
-      max-width: 500px;
-      animation: fadeIn 0.6s ease;
-    }
-    @keyframes fadeIn {
-      from {opacity: 0; transform: translateY(20px);}
-      to {opacity: 1; transform: translateY(0);}
-    }
+
     #reader {
       width: 100%;
-      max-width: 350px;
-      margin: 0 auto 20px;
+      max-width: 500px;
+      border: none;
       border-radius: 16px;
       overflow: hidden;
-      display: none;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
     }
+
+    .status-container {
+      padding: 20px;
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: fadeIn 0.6s ease;
+    }
+
     .status-icon {
-      font-family: 'Material Symbols Rounded';
       font-size: 4em;
-      margin-bottom: 12px;
-      display: inline-block;
+      line-height: 1;
+      margin-bottom: 15px;
     }
+
     .status-message {
-      font-size: 1.2em;
+      font-size: 1.3em;
       font-weight: 600;
     }
-    .status-scanning .status-icon {
-      color: #4CAF50;
-      animation: pulse 1.5s infinite;
-    }
-    .status-ready .status-icon {
-      color: #03A9F4;
-    }
+
+    .status-ready .status-icon { color: #03A9F4; }
+    .status-scanning .status-icon { color: #4CAF50; animation: pulse 1.5s infinite; }
+    .status-success .status-icon { color: #00E676; }
+    .status-error .status-icon { color: #FF5252; }
+
     @keyframes pulse {
-      0% { transform: scale(1);}
-      50% { transform: scale(1.1);}
-      100% { transform: scale(1);}
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
     }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     /* إشعارات عائمة */
     .toast {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: rgba(0,0,0,0.85);
+      padding: 12px 18px;
+      background: rgba(0,0,0,0.8);
       color: #fff;
-      padding: 12px 20px;
-      border-radius: 14px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-      font-size: 0.9em;
+      border-radius: 12px;
+      font-size: 0.95em;
       opacity: 0;
       transform: translateY(20px);
       transition: all 0.4s ease;
-      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
     .toast.show {
       opacity: 1;
@@ -91,25 +97,22 @@
   </style>
 </head>
 <body>
-
-  <div class="container">
-    <div id="reader"></div>
-
-    <div class="status-container status-ready" id="statusContainer">
-      <span id="statusIcon" class="status-icon material-symbols-rounded">schedule</span>
-      <p id="statusMessage">في انتظار طلب مسح من النظام...</p>
-    </div>
+  <div id="reader" style="display: none;"></div>
+  <div class="status-container status-ready" id="statusContainer">
+    <i id="statusIcon" class="status-icon fa-solid fa-hourglass-half"></i>
+    <p id="statusMessage">في انتظار طلب مسح من النظام...</p>
   </div>
 
-  <div id="toast" class="toast">تم التحديث</div>
+  <div id="toast" class="toast">🔔 إشعار تجريبي</div>
 
-  <!-- Firebase SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js";
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-    // ✅ Config بتاع مشروعك الجديد
+  <!-- QR Scanner -->
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBYMY7tpVUYuLmnmBr0RgB-GJ0Vbnx9Ofg",
       authDomain: "scaner-8bf66.firebaseapp.com",
@@ -120,11 +123,9 @@
       measurementId: "G-YF7GBJ57JS"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const analytics = getAnalytics(app);
-
-    const scannerSessionDocRef = doc(db, "scannerSessions", "fixed");
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const scannerSessionDocRef = db.collection('scannerSessions').doc('fixed');
 
     const statusContainer = document.getElementById('statusContainer');
     const statusIcon = document.getElementById('statusIcon');
@@ -139,25 +140,25 @@
       setTimeout(() => toast.classList.remove("show"), 3000);
     }
 
-    function updateStatusUI(status, message, iconName) {
+    function updateStatusUI(status, message, iconClass) {
       statusContainer.className = `status-container status-${status}`;
-      statusIcon.textContent = iconName;
+      statusIcon.className = `status-icon ${iconClass}`;
       statusMessage.textContent = message;
       showToast(message);
     }
 
     function onScanSuccess(decodedText) {
       if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(async () => {
+        html5QrCode.stop().then(() => {
           readerDiv.style.display = 'none';
-          statusContainer.style.display = 'block';
-          updateStatusUI('success', `✅ تم المسح بنجاح!`, 'check_circle');
-          await updateDoc(scannerSessionDocRef, {
+          statusContainer.style.display = 'flex';
+          updateStatusUI('success', `تم المسح بنجاح!`, 'fa-solid fa-circle-check');
+          scannerSessionDocRef.update({
             status: 'scanned',
             scannedValue: decodedText,
             scannedAt: new Date()
           });
-        });
+        }).catch(err => console.error("Failed to stop scanner", err));
       }
     }
 
@@ -174,33 +175,29 @@
           onScanSuccess
         );
       } catch (err) {
-        updateStatusUI('error', '⚠️ لا يمكن تشغيل الكاميرا', 'error');
+        updateStatusUI('error', 'لا يمكن تشغيل الكاميرا', 'fa-solid fa-video-slash');
       }
     }
 
-    onSnapshot(scannerSessionDocRef, (snapshot) => {
+    scannerSessionDocRef.onSnapshot((snapshot) => {
       const data = snapshot.data();
       if (!data) return;
 
       if (data.status === 'scanRequested') {
-        updateStatusUI('scanning', '📷 وجه الكاميرا للباركود...', 'qr_code_scanner');
+        updateStatusUI('scanning', 'وجه الكاميرا للباركود...', 'fa-solid fa-qrcode');
         startScanner();
       } else {
         if (html5QrCode && html5QrCode.isScanning) {
           html5QrCode.stop();
         }
         readerDiv.style.display = 'none';
-        statusContainer.style.display = 'block';
-        updateStatusUI('ready', '⌛ في انتظار طلب مسح من النظام...', 'schedule');
+        statusContainer.style.display = 'flex';
+        updateStatusUI('ready', 'في انتظار طلب مسح من النظام...', 'fa-solid fa-hourglass-half');
       }
     }, (error) => {
       console.error("Firestore listener error:", error);
-      updateStatusUI('error', '📡 فشل الاتصال بالنظام', 'wifi_off');
+      updateStatusUI('error', 'فشل الاتصال بالنظام', 'fa-solid fa-wifi');
     });
-
   </script>
-
-  <!-- مكتبة QR -->
-  <script src="https://unpkg.com/html5-qrcode"></script>
 </body>
 </html>
