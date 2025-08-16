@@ -3,148 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>ماسح الباركود - شيخ العرب</title>
-
-  <!-- خط Google (Cairo) -->
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
+  <title>ماسح الباركود</title>
 
   <!-- أيقونات Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
+  <!-- مكتبة QR -->
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+
   <style>
     body {
       font-family: 'Cairo', sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      background: #111;
       color: #fff;
       margin: 0;
-      text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
       overflow: hidden;
+      text-align: center;
     }
-
     #reader {
       width: 100%;
-      max-width: 500px;
-      border: none;
+      max-width: 400px;
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
-      backdrop-filter: blur(8px);
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      display: none;
     }
-
     .status-container {
       padding: 20px;
-      border-radius: 20px;
-      backdrop-filter: blur(12px);
-      background: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
       display: flex;
       flex-direction: column;
       align-items: center;
-      animation: fadeIn 0.6s ease;
+      gap: 10px;
     }
-
     .status-icon {
-      font-size: 4em;
-      line-height: 1;
-      margin-bottom: 15px;
+      font-size: 3em;
+      margin-bottom: 10px;
     }
-
     .status-message {
-      font-size: 1.3em;
+      font-size: 1.2em;
       font-weight: 600;
     }
-
     .status-ready .status-icon { color: #03A9F4; }
     .status-scanning .status-icon { color: #4CAF50; animation: pulse 1.5s infinite; }
-    .status-success .status-icon { color: #00E676; }
-    .status-error .status-icon { color: #FF5252; }
-
+    .status-success .status-icon { color: #00e676; }
+    .status-error .status-icon { color: #ff5252; }
     @keyframes pulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.1); }
       100% { transform: scale(1); }
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* إشعارات عائمة */
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      padding: 12px 18px;
-      background: rgba(0,0,0,0.8);
-      color: #fff;
-      border-radius: 12px;
-      font-size: 0.95em;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.4s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
   </style>
 </head>
 <body>
-  <div id="reader" style="display: none;"></div>
+
+  <div id="reader"></div>
+
   <div class="status-container status-ready" id="statusContainer">
     <i id="statusIcon" class="status-icon fa-solid fa-hourglass-half"></i>
     <p id="statusMessage">في انتظار طلب مسح من النظام...</p>
   </div>
 
-  <div id="toast" class="toast">🔔 إشعار تجريبي</div>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <!-- QR Scanner -->
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
-
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyBYMY7tpVUYuLmnmBr0RgB-GJ0Vbnx9Ofg",
-      authDomain: "scaner-8bf66.firebaseapp.com",
-      projectId: "scaner-8bf66",
-      storageBucket: "scaner-8bf66.firebasestorage.app",
-      messagingSenderId: "271990306832",
-      appId: "1:271990306832:web:c4bddc20a13be91adf3295",
-      measurementId: "G-YF7GBJ57JS"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const scannerSessionDocRef = db.collection('scannerSessions').doc('fixed');
-
     const statusContainer = document.getElementById('statusContainer');
     const statusIcon = document.getElementById('statusIcon');
     const statusMessage = document.getElementById('statusMessage');
     const readerDiv = document.getElementById('reader');
-    const toast = document.getElementById('toast');
     let html5QrCode;
-
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 3000);
-    }
 
     function updateStatusUI(status, message, iconClass) {
       statusContainer.className = `status-container status-${status}`;
       statusIcon.className = `status-icon ${iconClass}`;
       statusMessage.textContent = message;
-      showToast(message);
     }
 
     function onScanSuccess(decodedText) {
@@ -152,13 +86,10 @@
         html5QrCode.stop().then(() => {
           readerDiv.style.display = 'none';
           statusContainer.style.display = 'flex';
-          updateStatusUI('success', `تم المسح بنجاح!`, 'fa-solid fa-circle-check');
-          scannerSessionDocRef.update({
-            status: 'scanned',
-            scannedValue: decodedText,
-            scannedAt: new Date()
-          });
-        }).catch(err => console.error("Failed to stop scanner", err));
+          updateStatusUI('success', 'تم المسح بنجاح!', 'fa-solid fa-circle-check');
+        }).catch(err => {
+          updateStatusUI('error', 'تعذر إيقاف الكاميرا: ' + err, 'fa-solid fa-video-slash');
+        });
       }
     }
 
@@ -175,29 +106,14 @@
           onScanSuccess
         );
       } catch (err) {
-        updateStatusUI('error', 'لا يمكن تشغيل الكاميرا', 'fa-solid fa-video-slash');
+        updateStatusUI('error', 'فشل تشغيل الكاميرا: ' + err, 'fa-solid fa-video-slash');
       }
     }
 
-    scannerSessionDocRef.onSnapshot((snapshot) => {
-      const data = snapshot.data();
-      if (!data) return;
-
-      if (data.status === 'scanRequested') {
-        updateStatusUI('scanning', 'وجه الكاميرا للباركود...', 'fa-solid fa-qrcode');
-        startScanner();
-      } else {
-        if (html5QrCode && html5QrCode.isScanning) {
-          html5QrCode.stop();
-        }
-        readerDiv.style.display = 'none';
-        statusContainer.style.display = 'flex';
-        updateStatusUI('ready', 'في انتظار طلب مسح من النظام...', 'fa-solid fa-hourglass-half');
-      }
-    }, (error) => {
-      console.error("Firestore listener error:", error);
-      updateStatusUI('error', 'فشل الاتصال بالنظام', 'fa-solid fa-wifi');
-    });
+    // ✅ للتجربة اليدوية:
+    updateStatusUI('scanning', 'وجه الكاميرا للباركود...', 'fa-solid fa-qrcode');
+    startScanner();
   </script>
+
 </body>
 </html>
