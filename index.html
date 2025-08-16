@@ -5,140 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>ماسح الباركود</title>
 
-  <!-- أيقونات Font Awesome -->
+  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-  <!-- مكتبة QR من jsDelivr -->
-  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+  <!-- مكتبة QR من cdnjs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 
   <style>
-    body {
-      font-family: 'Cairo', sans-serif;
-      background: #111;
-      color: #fff;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      overflow: hidden;
-      text-align: center;
-    }
-    #reader {
-      width: 100%;
-      max-width: 400px;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 0 20px rgba(0,0,0,0.6);
-      display: none;
-    }
-    .status-container {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    .status-icon {
-      font-size: 3em;
-      margin-bottom: 10px;
-    }
-    .status-message {
-      font-size: 1.2em;
-      font-weight: 600;
-    }
-    .status-ready .status-icon { color: #03A9F4; }
-    .status-scanning .status-icon { color: #4CAF50; animation: pulse 1.5s infinite; }
-    .status-success .status-icon { color: #00e676; }
-    .status-error .status-icon { color: #ff5252; }
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
-    }
-    button.retry {
-      margin-top: 15px;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      background: #03A9F4;
-      color: #fff;
-      font-size: 1em;
-      cursor: pointer;
-    }
-    button.retry:hover {
-      background: #0288d1;
-    }
+    body { font-family: 'Cairo', sans-serif; background:#111; color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; height:100vh; margin:0 }
+    #reader { width:100%; max-width:400px; border-radius:16px; overflow:hidden; box-shadow:0 0 20px rgba(0,0,0,0.6); display:none }
+    .status-container { padding:20px; display:flex; flex-direction:column; align-items:center; gap:10px }
+    .status-icon { font-size:3em; margin-bottom:10px }
+    .status-message { font-size:1.2em; font-weight:600 }
+    .status-scanning .status-icon { color:#4CAF50; animation:pulse 1.5s infinite }
+    .status-success .status-icon { color:#00e676 }
+    .status-error .status-icon { color:#ff5252 }
+    @keyframes pulse {0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
   </style>
 </head>
 <body>
 
   <div id="reader"></div>
-
   <div class="status-container status-ready" id="statusContainer">
     <i id="statusIcon" class="status-icon fa-solid fa-hourglass-half"></i>
-    <p id="statusMessage">في انتظار تشغيل الكاميرا...</p>
+    <p id="statusMessage">جارٍ تهيئة الكاميرا...</p>
   </div>
 
   <script>
-    const statusContainer = document.getElementById('statusContainer');
-    const statusIcon = document.getElementById('statusIcon');
-    const statusMessage = document.getElementById('statusMessage');
-    const readerDiv = document.getElementById('reader');
-    let html5QrCode;
+    const readerDiv = document.getElementById("reader");
+    const statusContainer = document.getElementById("statusContainer");
+    const statusIcon = document.getElementById("statusIcon");
+    const statusMessage = document.getElementById("statusMessage");
 
-    function updateStatusUI(status, message, iconClass, showRetry = false) {
+    function updateUI(status, message, icon){
       statusContainer.className = `status-container status-${status}`;
-      statusIcon.className = `status-icon ${iconClass}`;
+      statusIcon.className = `status-icon ${icon}`;
       statusMessage.textContent = message;
-
-      // زر إعادة المحاولة في حالة الخطأ
-      if (showRetry) {
-        let retryBtn = document.createElement('button');
-        retryBtn.className = 'retry';
-        retryBtn.textContent = 'إعادة المحاولة';
-        retryBtn.onclick = startScanner;
-        statusContainer.appendChild(retryBtn);
-      } else {
-        const btn = statusContainer.querySelector('.retry');
-        if (btn) btn.remove();
-      }
     }
 
-    function onScanSuccess(decodedText) {
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-          readerDiv.style.display = 'none';
-          statusContainer.style.display = 'flex';
-          updateStatusUI('success', 'تم المسح بنجاح!', 'fa-solid fa-circle-check');
-        }).catch(err => {
-          updateStatusUI('error', 'تعذر إيقاف الكاميرا: ' + err, 'fa-solid fa-video-slash', true);
-        });
-      }
+    function onScanSuccess(decodedText){
+      updateUI("success", "تم المسح: " + decodedText, "fa-solid fa-circle-check");
     }
 
-    async function startScanner() {
-      statusContainer.style.display = 'none';
-      readerDiv.style.display = 'block';
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
+    async function startScanner(){
+      readerDiv.style.display = "block";
+      const html5QrCode = new Html5Qrcode("reader");
       try {
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
           onScanSuccess
         );
-        updateStatusUI('scanning', 'وجه الكاميرا للباركود...', 'fa-solid fa-qrcode');
-      } catch (err) {
-        readerDiv.style.display = 'none';
-        statusContainer.style.display = 'flex';
-        updateStatusUI('error', 'فشل تشغيل الكاميرا: ' + err, 'fa-solid fa-video-slash', true);
+        updateUI("scanning", "وجه الكاميرا للباركود...", "fa-solid fa-qrcode");
+      } catch (err){
+        updateUI("error", "فشل تشغيل الكاميرا: " + err, "fa-solid fa-video-slash");
       }
     }
 
-    // 🚀 يبدأ أوتوماتيك
     startScanner();
   </script>
 
